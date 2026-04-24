@@ -1,0 +1,108 @@
+import { forwardRef } from 'react';
+import { motion } from 'framer-motion';
+import type { Tile as TileType } from '../engine/types';
+import { COLOR_HEX } from '../engine/types';
+import { cn } from '../lib/utils';
+
+interface TileProps {
+  tile: TileType;
+  isDragging?: boolean;
+  isOver?: boolean;
+  className?: string;
+  style?: React.CSSProperties;
+  onClick?: () => void;
+}
+
+const Tile = forwardRef<HTMLDivElement, TileProps>(
+  ({ tile, isDragging, className, style, onClick, ...props }, ref) => {
+    if (tile.isJoker) {
+      return (
+        <motion.div
+          ref={ref}
+          className={cn(
+            'w-11 h-14 rounded-lg cursor-grab active:cursor-grabbing select-none',
+            'flex items-center justify-center relative',
+            'shadow-md hover:shadow-lg transition-shadow',
+            isDragging && 'opacity-50 scale-105',
+            className
+          )}
+          style={{
+            background: 'linear-gradient(135deg, #fef3c7, #fde68a)',
+            boxShadow: isDragging
+              ? '0 8px 25px rgba(0,0,0,0.3)'
+              : '0 2px 4px rgba(0,0,0,0.2), inset 0 1px 0 rgba(255,255,255,0.5)',
+            ...style,
+          }}
+          whileHover={{ y: -2 }}
+          layout
+          onClick={onClick}
+          {...props}
+        >
+          <span className="text-2xl">🃏</span>
+          <div
+            className="absolute inset-0 rounded-lg opacity-20"
+            style={{
+              background: 'linear-gradient(135deg, #dc2626, #2563eb, #ea580c, #10b981)',
+            }}
+          />
+        </motion.div>
+      );
+    }
+
+    const color = COLOR_HEX[tile.color];
+
+    return (
+      <motion.div
+        ref={ref}
+        className={cn(
+          'w-11 h-14 rounded-lg cursor-grab active:cursor-grabbing select-none',
+          'flex flex-col items-center justify-center relative overflow-hidden',
+          'shadow-md hover:shadow-lg transition-shadow',
+          isDragging && 'opacity-50 scale-105',
+          className
+        )}
+        style={{
+          background: 'linear-gradient(180deg, #fef3c7 0%, #fde68a 100%)',
+          boxShadow: isDragging
+            ? '0 8px 25px rgba(0,0,0,0.3)'
+            : '0 2px 4px rgba(0,0,0,0.2), inset 0 1px 0 rgba(255,255,255,0.5)',
+          ...style,
+        }}
+        whileHover={{ y: -2 }}
+        layout
+        onClick={onClick}
+        {...props}
+      >
+        {/* Top-left number */}
+        <span
+          className="absolute top-0.5 left-1 text-[8px] font-bold"
+          style={{ color }}
+        >
+          {tile.number}
+        </span>
+
+        {/* Center number */}
+        <span
+          className="text-xl font-black"
+          style={{ color }}
+        >
+          {tile.number}
+        </span>
+
+        {/* Bottom-right number (upside down) */}
+        <span
+          className="absolute bottom-0.5 right-1 text-[8px] font-bold rotate-180"
+          style={{ color }}
+        >
+          {tile.number}
+        </span>
+
+        {/* Subtle texture overlay */}
+        <div className="absolute inset-0 rounded-lg opacity-5 bg-gradient-to-br from-white to-transparent" />
+      </motion.div>
+    );
+  }
+);
+
+Tile.displayName = 'Tile';
+export default Tile;
