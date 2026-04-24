@@ -1,0 +1,74 @@
+@import "tailwindcss";
+
+@theme {
+  --color-felt: #065f46;
+  --color-felt-light: #047857;
+  --color-felt-dark: #064e3b;
+  --color-tile-face: #fef3c7;
+  --color-tile-shadow: #d4a574;
+  --color-tile-black: #1e293b;
+  --color-tile-red: #dc2626;
+  --color-tile-blue: #2563eb;
+  --color-tile-orange: #ea580c;
+  --color-valid: #10b981;
+  --color-invalid: #f43f5e;
+  --color-accent: #f59e0b;
+  --color-accent-dark: #d97706;
+}
+
+html, body, #root {
+  height: 100%;
+  margin: 0;
+  overflow: hidden;
+}
+
+body {
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+}
+
+/* Custom scrollbar for tile rack */
+.tile-rack-scroll::-webkit-scrollbar {
+  height: 6px;
+}
+.tile-rack-scroll::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 3px;
+}
+.tile-rack-scroll::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 3px;
+}
+
+/* Drag overlay styles */
+.dragging-tile {
+  cursor: grabbing;
+  z-index: 9999;
+}
+
+@keyframes pulse-glow {
+  0%, 100% { box-shadow: 0 0 8px rgba(16, 185, 129, 0.4); }
+  50% { box-shadow: 0 0 20px rgba(16, 185, 129, 0.8); }
+}
+
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-4px); }
+  75% { transform: translateX(4px); }
+}
+
+@keyframes heartbeat {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.05); }
+}
+
+.animate-pulse-glow {
+  animation: pulse-glow 2s ease-in-out infinite;
+}
+
+.animate-shake {
+  animation: shake 0.3s ease-in-out;
+}
+
+.animate-heartbeat {
+  animation: heartbeat 0.8s ease-in-out infinite;
+}
