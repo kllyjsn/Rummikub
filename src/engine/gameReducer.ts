@@ -282,7 +282,20 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
       if (state.phase !== 'playing') return state;
       const newTime = state.turnTimeRemaining - 1;
       if (newTime <= 0) {
-        return gameReducer(state, { type: 'DRAW_TILE' });
+        if (state.pool.length > 0) {
+          return gameReducer(state, { type: 'DRAW_TILE' });
+        }
+        // Pool empty — undo changes and advance turn without drawing
+        const undoneState = gameReducer(state, { type: 'UNDO_TURN' });
+        const nextIdx = (undoneState.currentPlayerIndex + 1) % undoneState.players.length;
+        const nextP = undoneState.players[nextIdx];
+        return {
+          ...undoneState,
+          currentPlayerIndex: nextIdx,
+          turnStartTable: undoneState.table.map(s => ({ ...s, tiles: [...s.tiles] })),
+          turnStartRack: [...nextP.rack],
+          turnTimeRemaining: undoneState.turnDuration,
+        };
       }
       return { ...state, turnTimeRemaining: newTime };
     }

@@ -14,9 +14,11 @@ interface SortableSetTileProps {
   tileId: string;
   tile: { id: string; color: string; number: number; isJoker: boolean };
   setId: string;
+  isHighlighted?: boolean;
+  animationDelay?: number;
 }
 
-function SortableSetTile({ tileId, tile, setId }: SortableSetTileProps) {
+function SortableSetTile({ tileId, tile, setId, isHighlighted, animationDelay }: SortableSetTileProps) {
   const {
     attributes,
     listeners,
@@ -39,6 +41,8 @@ function SortableSetTile({ tileId, tile, setId }: SortableSetTileProps) {
       <TileComponent
         tile={tile as import('../engine/types').Tile}
         isDragging={isDragging}
+        isHighlighted={isHighlighted}
+        animationDelay={animationDelay}
       />
     </div>
   );
@@ -46,9 +50,10 @@ function SortableSetTile({ tileId, tile, setId }: SortableSetTileProps) {
 
 interface TileSetComponentProps {
   tileSet: TileSetType;
+  highlightTileIds?: Set<string>;
 }
 
-export default function TileSetComponent({ tileSet }: TileSetComponentProps) {
+export default function TileSetComponent({ tileSet, highlightTileIds }: TileSetComponentProps) {
   const setType = classifySet(tileSet);
   const isValid = setType !== 'invalid';
   const isTooSmall = tileSet.tiles.length < 3;
@@ -75,12 +80,14 @@ export default function TileSetComponent({ tileSet }: TileSetComponentProps) {
         items={tileSet.tiles.map(t => `${tileSet.id}::${t.id}`)}
         strategy={horizontalListSortingStrategy}
       >
-        {tileSet.tiles.map(tile => (
+        {tileSet.tiles.map((tile, idx) => (
           <SortableSetTile
             key={tile.id}
             tileId={tile.id}
             tile={tile}
             setId={tileSet.id}
+            isHighlighted={highlightTileIds?.has(tile.id)}
+            animationDelay={highlightTileIds?.has(tile.id) ? idx * 0.1 : undefined}
           />
         ))}
       </SortableContext>

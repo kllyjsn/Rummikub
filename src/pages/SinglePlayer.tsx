@@ -5,6 +5,7 @@ import {
   DragOverlay,
   closestCenter,
   PointerSensor,
+  TouchSensor,
   useSensor,
   useSensors,
   type DragStartEvent,
@@ -17,6 +18,7 @@ import { useAudio } from '../hooks/useAudio';
 import type { Tile } from '../engine/types';
 import { findAIPlay, type AIDifficulty } from '../engine/ai';
 import { createSetId } from '../engine/gameReducer';
+import { cn } from '../lib/utils';
 import GameBoard from '../components/GameBoard';
 import TileRack from '../components/TileRack';
 import TileComponent from '../components/Tile';
@@ -42,6 +44,8 @@ export default function SinglePlayer() {
   const [gameStarted, setGameStarted] = useState(false);
   const [activeTile, setActiveTile] = useState<Tile | null>(null);
   const [aiThinking, setAiThinking] = useState(false);
+  const [aiPlayedTileIds, setAiPlayedTileIds] = useState<Set<string>>(new Set());
+  const [aiPlayMessage, setAiPlayMessage] = useState<string | null>(null);
   const aiTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const {
@@ -61,6 +65,9 @@ export default function SinglePlayer() {
   const sensors = useSensors(
     useSensor(PointerSensor, {
       activationConstraint: { distance: 5 },
+    }),
+    useSensor(TouchSensor, {
+      activationConstraint: { delay: 150, tolerance: 5 },
     })
   );
 
@@ -71,17 +78,6 @@ export default function SinglePlayer() {
   // Start game
   const handleStart = () => {
     startGame(2, turnDuration);
-    // Set player names
-    dispatch({
-      type: 'SYNC_STATE',
-      state: {
-        ...state,
-        players: state.players.map((p, i) => ({
-          ...p,
-          name: i === 0 ? playerName : `AI (${difficulty})`,
-        })),
-      },
-    });
     setGameStarted(true);
   };
 
@@ -111,12 +107,15 @@ export default function SinglePlayer() {
     aiTimeoutRef.current = setTimeout(() => {
       const play = findAIPlay(state, 1, difficulty);
 
-      if (play && play.newSets.length > 0) {
-        // Place tiles from rack to new sets
+      if (play && play.tilesToPlace.length > 0) {
+        // Track played tiles for animation
+        const playedIds = new Set(play.tilesToPlace.map(t => t.id));
+        setAiPlayedTileIds(playedIds);
+
+        // Place tiles from rack to table (new sets or extending existing ones)
         let newState = { ...state };
-        const newTable = [...state.table, ...play.newSets];
-        const playedTileIds = new Set(play.tilesToPlace.map(t => t.id));
-        const newRack = state.players[1].rack.filter(t => !playedTileIds.has(t.id));
+        const newTable = play.modifiedTable;
+        const newRack = state.players[1].rack.filter(t => !playedIds.has(t.id));
 
         newState = {
           ...newState,
@@ -126,57 +125,71 @@ export default function SinglePlayer() {
           ),
         };
 
-        // Check for AI win
-        if (newRack.length === 0) {
-          dispatch({
-            type: 'SYNC_STATE',
-            state: {
-              ...newState,
-              phase: 'game_over',
-              winner: state.players[1].id,
-              gameLog: [
-                ...newState.gameLog,
-                {
-                  playerId: state.players[1].id,
-                  playerName: state.players[1].name,
-                  action: 'win',
-                  timestamp: Date.now(),
-                },
-              ],
-            },
-          });
-        } else {
-          // End AI turn
-          dispatch({
-            type: 'SYNC_STATE',
-            state: {
-              ...newState,
-              currentPlayerIndex: 0,
-              turnStartTable: newTable.map(s => ({ ...s, tiles: [...s.tiles] })),
-              turnStartRack: [...state.players[0].rack],
-              turnTimeRemaining: state.turnDuration,
-              gameLog: [
-                ...newState.gameLog,
-                {
-                  playerId: state.players[1].id,
-                  playerName: state.players[1].name,
-                  action: 'play',
-                  tilesPlayed: play.tilesToPlace.length,
-                  timestamp: Date.now(),
-                },
-              ],
-            },
-          });
-        }
+        // Show play message
+        setAiPlayMessage(`AI played ${play.tilesToPlace.length} tile${play.tilesToPlace.length > 1 ? 's' : ''}!`);
         audio.playTilePlace();
+
+        // Dispatch table + rack update immediately so tiles render with highlights
+        dispatch({
+          type: 'SYNC_STATE',
+          state: {
+            ...newState,
+            gameLog: [
+              ...newState.gameLog,
+              {
+                playerId: state.players[1].id,
+                playerName: state.players[1].name,
+                action: newRack.length === 0 ? 'win' : 'play',
+                tilesPlayed: play.tilesToPlace.length,
+                timestamp: Date.now(),
+              },
+            ],
+            ...(newRack.length === 0
+              ? { phase: 'game_over' as const, winner: state.players[1].id }
+              : {}),
+          },
+        });
+
+        // After a pause, clear highlights and advance to player's turn
+        setTimeout(() => {
+          setAiPlayedTileIds(new Set());
+          setAiPlayMessage(null);
+          setAiThinking(false);
+          if (newRack.length > 0) {
+            dispatch({
+              type: 'SYNC_STATE',
+              state: {
+                ...newState,
+                currentPlayerIndex: 0,
+                turnStartTable: newTable.map(s => ({ ...s, tiles: [...s.tiles] })),
+                turnStartRack: [...state.players[0].rack],
+                turnTimeRemaining: state.turnDuration,
+                gameLog: [
+                  ...newState.gameLog,
+                  {
+                    playerId: state.players[1].id,
+                    playerName: state.players[1].name,
+                    action: 'play',
+                    tilesPlayed: play.tilesToPlace.length,
+                    timestamp: Date.now(),
+                  },
+                ],
+              },
+            });
+          }
+        }, 800);
+        return;
       } else {
-        // AI draws
+        // AI draws — show message
+        setAiPlayMessage('AI drew a tile');
         drawTile();
         audio.playTileDraw();
       }
 
+      setAiPlayedTileIds(new Set());
       setAiThinking(false);
-    }, 1000 + Math.random() * 1500);
+      setTimeout(() => setAiPlayMessage(null), 600);
+    }, 400 + Math.random() * 400);
   }, [state, difficulty, dispatch, drawTile, audio]);
 
   useEffect(() => {
@@ -443,15 +456,15 @@ export default function SinglePlayer() {
     >
       <div className="h-full flex flex-col bg-slate-950">
         {/* Header */}
-        <div className="flex items-center justify-between px-4 py-2 bg-slate-900/80 border-b border-slate-800">
-          <div className="flex items-center gap-3">
+        <div className="flex items-center justify-between px-2 sm:px-4 py-1.5 sm:py-2 bg-slate-900/80 border-b border-slate-800">
+          <div className="flex items-center gap-2 sm:gap-3">
             <button
               onClick={() => navigate('/')}
               className="text-slate-400 hover:text-white transition-colors"
             >
               <ArrowLeft size={18} />
             </button>
-            <h1 className="text-lg font-bold text-white">
+            <h1 className="hidden sm:block text-lg font-bold text-white">
               <span className="text-tile-red">R</span>
               <span className="text-tile-blue">u</span>
               <span className="text-tile-orange">m</span>
@@ -474,20 +487,25 @@ export default function SinglePlayer() {
           />
         </div>
 
-        {/* AI thinking indicator */}
-        {aiThinking && (
-          <div className="bg-amber-900/30 px-4 py-1.5 text-center text-sm text-amber-300 border-b border-amber-800/30">
-            AI is thinking<span className="animate-pulse">...</span>
+        {/* AI status indicator */}
+        {(aiThinking || aiPlayMessage) && (
+          <div className={cn(
+            'px-4 py-1.5 text-center text-sm border-b transition-all',
+            aiPlayMessage && !aiThinking
+              ? 'bg-emerald-900/30 text-emerald-300 border-emerald-800/30'
+              : 'bg-amber-900/30 text-amber-300 border-amber-800/30'
+          )}>
+            {aiPlayMessage || <>AI is thinking<span className="animate-pulse">...</span></>}
           </div>
         )}
 
         {/* Game board */}
-        <div className="flex-1 p-3 overflow-hidden">
-          <GameBoard table={state.table} poolSize={state.pool.length} />
+        <div className="flex-1 p-1.5 sm:p-3 overflow-hidden">
+          <GameBoard table={state.table} poolSize={state.pool.length} highlightTileIds={aiPlayedTileIds} />
         </div>
 
         {/* Player rack */}
-        <div className="px-3 pb-2">
+        <div className="px-1.5 sm:px-3 pb-1.5 sm:pb-2">
           <TileRack
             tiles={currentPlayer?.rack || []}
             onSortByNumber={() => sortRack('number')}
@@ -497,30 +515,30 @@ export default function SinglePlayer() {
         </div>
 
         {/* Action bar */}
-        <div className="flex items-center justify-between px-4 py-2 bg-slate-900/80 border-t border-slate-800">
-          <div className="flex gap-2">
+        <div className="flex items-center justify-between px-2 sm:px-4 py-1.5 sm:py-2 bg-slate-900/80 border-t border-slate-800">
+          <div className="flex gap-1.5 sm:gap-2">
             <button
               onClick={handleUndo}
               disabled={!isPlayerTurn}
-              className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-slate-700 hover:bg-slate-600 text-slate-300 text-sm font-semibold disabled:opacity-30 transition-colors"
+              className="flex items-center gap-1 sm:gap-1.5 px-2.5 sm:px-3 py-1.5 sm:py-2 rounded-lg bg-slate-700 hover:bg-slate-600 text-slate-300 text-xs sm:text-sm font-semibold disabled:opacity-30 transition-colors"
             >
               <Undo2 size={14} />
               Undo
             </button>
           </div>
 
-          <div className="flex gap-2">
+          <div className="flex gap-1.5 sm:gap-2">
             <button
               onClick={handleDrawTile}
               disabled={!isPlayerTurn || state.pool.length === 0}
-              className="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-slate-700 hover:bg-slate-600 text-slate-300 text-sm font-semibold disabled:opacity-30 transition-colors"
+              className="flex items-center gap-1 sm:gap-1.5 px-2.5 sm:px-4 py-1.5 sm:py-2 rounded-lg bg-slate-700 hover:bg-slate-600 text-slate-300 text-xs sm:text-sm font-semibold disabled:opacity-30 transition-colors"
             >
-              Draw Tile
+              Draw
             </button>
             <button
               onClick={handleEndTurn}
               disabled={!isPlayerTurn || !canEndTurn()}
-              className="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-accent hover:bg-accent-dark text-slate-900 text-sm font-bold disabled:opacity-30 transition-colors"
+              className="flex items-center gap-1 sm:gap-1.5 px-2.5 sm:px-4 py-1.5 sm:py-2 rounded-lg bg-accent hover:bg-accent-dark text-slate-900 text-xs sm:text-sm font-bold disabled:opacity-30 transition-colors"
             >
               <SkipForward size={14} />
               End Turn

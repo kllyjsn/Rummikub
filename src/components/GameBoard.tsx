@@ -6,9 +6,10 @@ import { cn } from '../lib/utils';
 interface GameBoardProps {
   table: TileSetType[];
   poolSize: number;
+  highlightTileIds?: Set<string>;
 }
 
-export default function GameBoard({ table, poolSize }: GameBoardProps) {
+export default function GameBoard({ table, poolSize, highlightTileIds }: GameBoardProps) {
   const { setNodeRef, isOver } = useDroppable({
     id: 'table-new-set',
     data: { type: 'table-new-set' },
@@ -18,7 +19,7 @@ export default function GameBoard({ table, poolSize }: GameBoardProps) {
     <div
       ref={setNodeRef}
       className={cn(
-        'flex-1 rounded-xl p-4 overflow-auto transition-all relative',
+        'flex-1 rounded-lg sm:rounded-xl p-2 sm:p-4 overflow-auto transition-all relative',
         'border-2',
         isOver
           ? 'border-accent/50 bg-felt-light/80'
@@ -41,13 +42,13 @@ export default function GameBoard({ table, poolSize }: GameBoardProps) {
       </div>
 
       {/* Sets on the table */}
-      <div className="flex flex-wrap gap-3 min-h-[200px] items-start content-start">
+      <div className="flex flex-wrap gap-2 sm:gap-3 min-h-[120px] sm:min-h-[200px] items-start content-start">
         {table.map(tileSet => (
-          <TileSetComponent key={tileSet.id} tileSet={tileSet} />
+          <TileSetComponent key={tileSet.id} tileSet={tileSet} highlightTileIds={highlightTileIds} />
         ))}
 
         {table.length === 0 && !isOver && (
-          <div className="flex items-center justify-center w-full h-48 text-emerald-300/40 text-lg">
+          <div className="flex items-center justify-center w-full h-24 sm:h-48 text-emerald-300/40 text-sm sm:text-lg">
             Drag tiles here to play
           </div>
         )}
