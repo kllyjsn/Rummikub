@@ -184,12 +184,11 @@ export default function SinglePlayer() {
         setAiPlayMessage('AI drew a tile');
         drawTile();
         audio.playTileDraw();
-        setTimeout(() => setAiPlayMessage(null), 600);
       }
 
       setAiPlayedTileIds(new Set());
-      setAiPlayMessage(null);
       setAiThinking(false);
+      setTimeout(() => setAiPlayMessage(null), 600);
     }, 400 + Math.random() * 400);
   }, [state, difficulty, dispatch, drawTile, audio]);
 
