@@ -20,10 +20,16 @@ html, body, #root {
   height: 100%;
   margin: 0;
   overflow: hidden;
+  /* Prevent pull-to-refresh and overscroll on mobile */
+  overscroll-behavior: none;
 }
 
 body {
   font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  /* Prevent iOS double-tap zoom */
+  touch-action: manipulation;
+  /* Safe area insets for notched devices */
+  padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
 }
 
 /* Custom scrollbar for tile rack */

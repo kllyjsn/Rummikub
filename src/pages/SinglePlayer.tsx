@@ -5,6 +5,7 @@ import {
   DragOverlay,
   closestCenter,
   PointerSensor,
+  TouchSensor,
   useSensor,
   useSensors,
   type DragStartEvent,
@@ -61,6 +62,9 @@ export default function SinglePlayer() {
   const sensors = useSensors(
     useSensor(PointerSensor, {
       activationConstraint: { distance: 5 },
+    }),
+    useSensor(TouchSensor, {
+      activationConstraint: { delay: 150, tolerance: 5 },
     })
   );
 
@@ -71,17 +75,6 @@ export default function SinglePlayer() {
   // Start game
   const handleStart = () => {
     startGame(2, turnDuration);
-    // Set player names
-    dispatch({
-      type: 'SYNC_STATE',
-      state: {
-        ...state,
-        players: state.players.map((p, i) => ({
-          ...p,
-          name: i === 0 ? playerName : `AI (${difficulty})`,
-        })),
-      },
-    });
     setGameStarted(true);
   };
 
@@ -111,10 +104,10 @@ export default function SinglePlayer() {
     aiTimeoutRef.current = setTimeout(() => {
       const play = findAIPlay(state, 1, difficulty);
 
-      if (play && play.newSets.length > 0) {
-        // Place tiles from rack to new sets
+      if (play && play.tilesToPlace.length > 0) {
+        // Place tiles from rack to table (new sets or extending existing ones)
         let newState = { ...state };
-        const newTable = [...state.table, ...play.newSets];
+        const newTable = play.modifiedTable;
         const playedTileIds = new Set(play.tilesToPlace.map(t => t.id));
         const newRack = state.players[1].rack.filter(t => !playedTileIds.has(t.id));
 
@@ -443,15 +436,15 @@ export default function SinglePlayer() {
     >
       <div className="h-full flex flex-col bg-slate-950">
         {/* Header */}
-        <div className="flex items-center justify-between px-4 py-2 bg-slate-900/80 border-b border-slate-800">
-          <div className="flex items-center gap-3">
+        <div className="flex items-center justify-between px-2 sm:px-4 py-1.5 sm:py-2 bg-slate-900/80 border-b border-slate-800">
+          <div className="flex items-center gap-2 sm:gap-3">
             <button
               onClick={() => navigate('/')}
               className="text-slate-400 hover:text-white transition-colors"
             >
               <ArrowLeft size={18} />
             </button>
-            <h1 className="text-lg font-bold text-white">
+            <h1 className="hidden sm:block text-lg font-bold text-white">
               <span className="text-tile-red">R</span>
               <span className="text-tile-blue">u</span>
               <span className="text-tile-orange">m</span>
@@ -482,12 +475,12 @@ export default function SinglePlayer() {
         )}
 
         {/* Game board */}
-        <div className="flex-1 p-3 overflow-hidden">
+        <div className="flex-1 p-1.5 sm:p-3 overflow-hidden">
           <GameBoard table={state.table} poolSize={state.pool.length} />
         </div>
 
         {/* Player rack */}
-        <div className="px-3 pb-2">
+        <div className="px-1.5 sm:px-3 pb-1.5 sm:pb-2">
           <TileRack
             tiles={currentPlayer?.rack || []}
             onSortByNumber={() => sortRack('number')}
@@ -497,30 +490,30 @@ export default function SinglePlayer() {
         </div>
 
         {/* Action bar */}
-        <div className="flex items-center justify-between px-4 py-2 bg-slate-900/80 border-t border-slate-800">
-          <div className="flex gap-2">
+        <div className="flex items-center justify-between px-2 sm:px-4 py-1.5 sm:py-2 bg-slate-900/80 border-t border-slate-800">
+          <div className="flex gap-1.5 sm:gap-2">
             <button
               onClick={handleUndo}
               disabled={!isPlayerTurn}
-              className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-slate-700 hover:bg-slate-600 text-slate-300 text-sm font-semibold disabled:opacity-30 transition-colors"
+              className="flex items-center gap-1 sm:gap-1.5 px-2.5 sm:px-3 py-1.5 sm:py-2 rounded-lg bg-slate-700 hover:bg-slate-600 text-slate-300 text-xs sm:text-sm font-semibold disabled:opacity-30 transition-colors"
             >
               <Undo2 size={14} />
               Undo
             </button>
           </div>
 
-          <div className="flex gap-2">
+          <div className="flex gap-1.5 sm:gap-2">
             <button
               onClick={handleDrawTile}
               disabled={!isPlayerTurn || state.pool.length === 0}
-              className="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-slate-700 hover:bg-slate-600 text-slate-300 text-sm font-semibold disabled:opacity-30 transition-colors"
+              className="flex items-center gap-1 sm:gap-1.5 px-2.5 sm:px-4 py-1.5 sm:py-2 rounded-lg bg-slate-700 hover:bg-slate-600 text-slate-300 text-xs sm:text-sm font-semibold disabled:opacity-30 transition-colors"
             >
-              Draw Tile
+              Draw
             </button>
             <button
               onClick={handleEndTurn}
               disabled={!isPlayerTurn || !canEndTurn()}
-              className="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-accent hover:bg-accent-dark text-slate-900 text-sm font-bold disabled:opacity-30 transition-colors"
+              className="flex items-center gap-1 sm:gap-1.5 px-2.5 sm:px-4 py-1.5 sm:py-2 rounded-lg bg-accent hover:bg-accent-dark text-slate-900 text-xs sm:text-sm font-bold disabled:opacity-30 transition-colors"
             >
               <SkipForward size={14} />
               End Turn

@@ -20,7 +20,7 @@ const Tile = forwardRef<HTMLDivElement, TileProps>(
         <motion.div
           ref={ref}
           className={cn(
-            'w-11 h-14 rounded-lg cursor-grab active:cursor-grabbing select-none',
+            'w-9 h-12 sm:w-11 sm:h-14 rounded-lg cursor-grab active:cursor-grabbing select-none',
             'flex items-center justify-center relative',
             'shadow-md hover:shadow-lg transition-shadow',
             isDragging && 'opacity-50 scale-105',
@@ -38,7 +38,7 @@ const Tile = forwardRef<HTMLDivElement, TileProps>(
           onClick={onClick}
           {...props}
         >
-          <span className="text-2xl">🃏</span>
+          <span className="text-lg sm:text-2xl">🃏</span>
           <div
             className="absolute inset-0 rounded-lg opacity-20"
             style={{
@@ -55,7 +55,7 @@ const Tile = forwardRef<HTMLDivElement, TileProps>(
       <motion.div
         ref={ref}
         className={cn(
-          'w-11 h-14 rounded-lg cursor-grab active:cursor-grabbing select-none',
+          'w-9 h-12 sm:w-11 sm:h-14 rounded-lg cursor-grab active:cursor-grabbing select-none',
           'flex flex-col items-center justify-center relative overflow-hidden',
           'shadow-md hover:shadow-lg transition-shadow',
           isDragging && 'opacity-50 scale-105',
@@ -83,7 +83,7 @@ const Tile = forwardRef<HTMLDivElement, TileProps>(
 
         {/* Center number */}
         <span
-          className="text-xl font-black"
+          className="text-base sm:text-xl font-black"
           style={{ color }}
         >
           {tile.number}

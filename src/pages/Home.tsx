@@ -37,7 +37,7 @@ export default function Home() {
       >
         {/* Logo */}
         <div className="mb-8">
-          <h1 className="text-6xl font-black tracking-tight">
+          <h1 className="text-4xl sm:text-6xl font-black tracking-tight">
             <span className="text-tile-red">R</span>
             <span className="text-tile-blue">u</span>
             <span className="text-tile-orange">m</span>
@@ -45,7 +45,7 @@ export default function Home() {
             <span className="text-tile-red">i</span>
             <span className="text-accent">Cube</span>
           </h1>
-          <p className="text-slate-400 mt-2 text-lg">The classic tile game, reimagined</p>
+          <p className="text-slate-400 mt-2 text-base sm:text-lg">The classic tile game, reimagined</p>
         </div>
 
         {/* Name input */}
@@ -56,12 +56,12 @@ export default function Home() {
             onChange={e => setPlayerName(e.target.value)}
             placeholder="Enter your name..."
             maxLength={20}
-            className="w-72 px-4 py-3 rounded-xl bg-slate-800/80 border border-slate-700 text-white text-center text-lg placeholder-slate-500 outline-none focus:border-accent/50 transition-colors"
+            className="w-64 sm:w-72 px-4 py-3 rounded-xl bg-slate-800/80 border border-slate-700 text-white text-center text-base sm:text-lg placeholder-slate-500 outline-none focus:border-accent/50 transition-colors"
           />
         </div>
 
         {/* Game modes */}
-        <div className="flex flex-col gap-3 w-72 mx-auto">
+        <div className="flex flex-col gap-3 w-64 sm:w-72 mx-auto">
           <motion.button
             whileHover={{ scale: 1.02 }}
             whileTap={{ scale: 0.98 }}

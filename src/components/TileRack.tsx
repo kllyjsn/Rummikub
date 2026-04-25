@@ -56,7 +56,7 @@ export default function TileRack({
   return (
     <div
       className={cn(
-        'rounded-xl p-3 transition-colors',
+        'rounded-xl p-2 sm:p-3 transition-colors',
         isCurrentPlayer
           ? 'bg-amber-900/40 border-2 border-amber-600/50'
           : 'bg-slate-800/50 border-2 border-slate-700/30',
