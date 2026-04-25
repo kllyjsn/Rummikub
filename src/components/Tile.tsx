@@ -8,13 +8,37 @@ interface TileProps {
   tile: TileType;
   isDragging?: boolean;
   isOver?: boolean;
+  isHighlighted?: boolean;
+  animationDelay?: number;
   className?: string;
   style?: React.CSSProperties;
   onClick?: () => void;
 }
 
+const highlightAnimation = {
+  initial: { scale: 0, opacity: 0, rotateY: 90 },
+  animate: { scale: 1, opacity: 1, rotateY: 0 },
+};
+
 const Tile = forwardRef<HTMLDivElement, TileProps>(
-  ({ tile, isDragging, className, style, onClick, ...props }, ref) => {
+  ({ tile, isDragging, isHighlighted, animationDelay, className, style, onClick, ...props }, ref) => {
+    const motionProps = isHighlighted
+      ? {
+          initial: highlightAnimation.initial,
+          animate: highlightAnimation.animate,
+          transition: {
+            type: 'spring' as const,
+            stiffness: 300,
+            damping: 20,
+            delay: animationDelay ?? 0,
+          },
+        }
+      : {};
+
+    const glowShadow = isHighlighted
+      ? '0 0 12px 4px rgba(245, 158, 11, 0.6), 0 0 24px 8px rgba(245, 158, 11, 0.3)'
+      : undefined;
+
     if (tile.isJoker) {
       return (
         <motion.div
@@ -24,18 +48,20 @@ const Tile = forwardRef<HTMLDivElement, TileProps>(
             'flex items-center justify-center relative',
             'shadow-md hover:shadow-lg transition-shadow',
             isDragging && 'opacity-50 scale-105',
+            isHighlighted && 'ring-2 ring-accent z-10',
             className
           )}
           style={{
             background: 'linear-gradient(135deg, #fef3c7, #fde68a)',
-            boxShadow: isDragging
+            boxShadow: glowShadow || (isDragging
               ? '0 8px 25px rgba(0,0,0,0.3)'
-              : '0 2px 4px rgba(0,0,0,0.2), inset 0 1px 0 rgba(255,255,255,0.5)',
+              : '0 2px 4px rgba(0,0,0,0.2), inset 0 1px 0 rgba(255,255,255,0.5)'),
             ...style,
           }}
           whileHover={{ y: -2 }}
           layout
           onClick={onClick}
+          {...motionProps}
           {...props}
         >
           <span className="text-lg sm:text-2xl">🃏</span>
@@ -59,18 +85,20 @@ const Tile = forwardRef<HTMLDivElement, TileProps>(
           'flex flex-col items-center justify-center relative overflow-hidden',
           'shadow-md hover:shadow-lg transition-shadow',
           isDragging && 'opacity-50 scale-105',
+          isHighlighted && 'ring-2 ring-accent z-10',
           className
         )}
         style={{
           background: 'linear-gradient(180deg, #fef3c7 0%, #fde68a 100%)',
-          boxShadow: isDragging
+          boxShadow: glowShadow || (isDragging
             ? '0 8px 25px rgba(0,0,0,0.3)'
-            : '0 2px 4px rgba(0,0,0,0.2), inset 0 1px 0 rgba(255,255,255,0.5)',
+            : '0 2px 4px rgba(0,0,0,0.2), inset 0 1px 0 rgba(255,255,255,0.5)'),
           ...style,
         }}
         whileHover={{ y: -2 }}
         layout
         onClick={onClick}
+        {...motionProps}
         {...props}
       >
         {/* Top-left number */}

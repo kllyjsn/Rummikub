@@ -6,9 +6,10 @@ import { cn } from '../lib/utils';
 interface GameBoardProps {
   table: TileSetType[];
   poolSize: number;
+  highlightTileIds?: Set<string>;
 }
 
-export default function GameBoard({ table, poolSize }: GameBoardProps) {
+export default function GameBoard({ table, poolSize, highlightTileIds }: GameBoardProps) {
   const { setNodeRef, isOver } = useDroppable({
     id: 'table-new-set',
     data: { type: 'table-new-set' },
@@ -43,7 +44,7 @@ export default function GameBoard({ table, poolSize }: GameBoardProps) {
       {/* Sets on the table */}
       <div className="flex flex-wrap gap-2 sm:gap-3 min-h-[120px] sm:min-h-[200px] items-start content-start">
         {table.map(tileSet => (
-          <TileSetComponent key={tileSet.id} tileSet={tileSet} />
+          <TileSetComponent key={tileSet.id} tileSet={tileSet} highlightTileIds={highlightTileIds} />
         ))}
 
         {table.length === 0 && !isOver && (

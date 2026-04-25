@@ -18,6 +18,7 @@ import { useAudio } from '../hooks/useAudio';
 import type { Tile } from '../engine/types';
 import { findAIPlay, type AIDifficulty } from '../engine/ai';
 import { createSetId } from '../engine/gameReducer';
+import { cn } from '../lib/utils';
 import GameBoard from '../components/GameBoard';
 import TileRack from '../components/TileRack';
 import TileComponent from '../components/Tile';
@@ -43,6 +44,8 @@ export default function SinglePlayer() {
   const [gameStarted, setGameStarted] = useState(false);
   const [activeTile, setActiveTile] = useState<Tile | null>(null);
   const [aiThinking, setAiThinking] = useState(false);
+  const [aiPlayedTileIds, setAiPlayedTileIds] = useState<Set<string>>(new Set());
+  const [aiPlayMessage, setAiPlayMessage] = useState<string | null>(null);
   const aiTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const {
@@ -105,11 +108,14 @@ export default function SinglePlayer() {
       const play = findAIPlay(state, 1, difficulty);
 
       if (play && play.tilesToPlace.length > 0) {
+        // Track played tiles for animation
+        const playedIds = new Set(play.tilesToPlace.map(t => t.id));
+        setAiPlayedTileIds(playedIds);
+
         // Place tiles from rack to table (new sets or extending existing ones)
         let newState = { ...state };
         const newTable = play.modifiedTable;
-        const playedTileIds = new Set(play.tilesToPlace.map(t => t.id));
-        const newRack = state.players[1].rack.filter(t => !playedTileIds.has(t.id));
+        const newRack = state.players[1].rack.filter(t => !playedIds.has(t.id));
 
         newState = {
           ...newState,
@@ -118,6 +124,10 @@ export default function SinglePlayer() {
             i === 1 ? { ...p, rack: newRack, hasInitialMeld: true } : p
           ),
         };
+
+        // Show play message
+        setAiPlayMessage(`AI played ${play.tilesToPlace.length} tile${play.tilesToPlace.length > 1 ? 's' : ''}!`);
+        audio.playTilePlace();
 
         // Check for AI win
         if (newRack.length === 0) {
@@ -139,37 +149,46 @@ export default function SinglePlayer() {
             },
           });
         } else {
-          // End AI turn
-          dispatch({
-            type: 'SYNC_STATE',
-            state: {
-              ...newState,
-              currentPlayerIndex: 0,
-              turnStartTable: newTable.map(s => ({ ...s, tiles: [...s.tiles] })),
-              turnStartRack: [...state.players[0].rack],
-              turnTimeRemaining: state.turnDuration,
-              gameLog: [
-                ...newState.gameLog,
-                {
-                  playerId: state.players[1].id,
-                  playerName: state.players[1].name,
-                  action: 'play',
-                  tilesPlayed: play.tilesToPlace.length,
-                  timestamp: Date.now(),
-                },
-              ],
-            },
-          });
+          // End AI turn after a brief pause to show the play
+          setTimeout(() => {
+            dispatch({
+              type: 'SYNC_STATE',
+              state: {
+                ...newState,
+                currentPlayerIndex: 0,
+                turnStartTable: newTable.map(s => ({ ...s, tiles: [...s.tiles] })),
+                turnStartRack: [...state.players[0].rack],
+                turnTimeRemaining: state.turnDuration,
+                gameLog: [
+                  ...newState.gameLog,
+                  {
+                    playerId: state.players[1].id,
+                    playerName: state.players[1].name,
+                    action: 'play',
+                    tilesPlayed: play.tilesToPlace.length,
+                    timestamp: Date.now(),
+                  },
+                ],
+              },
+            });
+            // Clear animation state
+            setAiPlayedTileIds(new Set());
+            setAiPlayMessage(null);
+            setAiThinking(false);
+          }, 800);
+          return;
         }
-        audio.playTilePlace();
       } else {
-        // AI draws
+        // AI draws — show message
+        setAiPlayMessage('AI drew a tile');
         drawTile();
         audio.playTileDraw();
+        setTimeout(() => setAiPlayMessage(null), 600);
       }
 
+      setAiPlayedTileIds(new Set());
       setAiThinking(false);
-    }, 1000 + Math.random() * 1500);
+    }, 400 + Math.random() * 400);
   }, [state, difficulty, dispatch, drawTile, audio]);
 
   useEffect(() => {
@@ -467,16 +486,21 @@ export default function SinglePlayer() {
           />
         </div>
 
-        {/* AI thinking indicator */}
-        {aiThinking && (
-          <div className="bg-amber-900/30 px-4 py-1.5 text-center text-sm text-amber-300 border-b border-amber-800/30">
-            AI is thinking<span className="animate-pulse">...</span>
+        {/* AI status indicator */}
+        {(aiThinking || aiPlayMessage) && (
+          <div className={cn(
+            'px-4 py-1.5 text-center text-sm border-b transition-all',
+            aiPlayMessage && !aiThinking
+              ? 'bg-emerald-900/30 text-emerald-300 border-emerald-800/30'
+              : 'bg-amber-900/30 text-amber-300 border-amber-800/30'
+          )}>
+            {aiPlayMessage || <>AI is thinking<span className="animate-pulse">...</span></>}
           </div>
         )}
 
         {/* Game board */}
         <div className="flex-1 p-1.5 sm:p-3 overflow-hidden">
-          <GameBoard table={state.table} poolSize={state.pool.length} />
+          <GameBoard table={state.table} poolSize={state.pool.length} highlightTileIds={aiPlayedTileIds} />
         </div>
 
         {/* Player rack */}
