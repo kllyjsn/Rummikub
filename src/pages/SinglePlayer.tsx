@@ -129,28 +129,33 @@ export default function SinglePlayer() {
         setAiPlayMessage(`AI played ${play.tilesToPlace.length} tile${play.tilesToPlace.length > 1 ? 's' : ''}!`);
         audio.playTilePlace();
 
-        // Check for AI win
-        if (newRack.length === 0) {
-          dispatch({
-            type: 'SYNC_STATE',
-            state: {
-              ...newState,
-              phase: 'game_over',
-              winner: state.players[1].id,
-              gameLog: [
-                ...newState.gameLog,
-                {
-                  playerId: state.players[1].id,
-                  playerName: state.players[1].name,
-                  action: 'win',
-                  timestamp: Date.now(),
-                },
-              ],
-            },
-          });
-        } else {
-          // End AI turn after a brief pause to show the play
-          setTimeout(() => {
+        // Dispatch table + rack update immediately so tiles render with highlights
+        dispatch({
+          type: 'SYNC_STATE',
+          state: {
+            ...newState,
+            gameLog: [
+              ...newState.gameLog,
+              {
+                playerId: state.players[1].id,
+                playerName: state.players[1].name,
+                action: newRack.length === 0 ? 'win' : 'play',
+                tilesPlayed: play.tilesToPlace.length,
+                timestamp: Date.now(),
+              },
+            ],
+            ...(newRack.length === 0
+              ? { phase: 'game_over' as const, winner: state.players[1].id }
+              : {}),
+          },
+        });
+
+        // After a pause, clear highlights and advance to player's turn
+        setTimeout(() => {
+          setAiPlayedTileIds(new Set());
+          setAiPlayMessage(null);
+          setAiThinking(false);
+          if (newRack.length > 0) {
             dispatch({
               type: 'SYNC_STATE',
               state: {
@@ -171,13 +176,9 @@ export default function SinglePlayer() {
                 ],
               },
             });
-            // Clear animation state
-            setAiPlayedTileIds(new Set());
-            setAiPlayMessage(null);
-            setAiThinking(false);
-          }, 800);
-          return;
-        }
+          }
+        }, 800);
+        return;
       } else {
         // AI draws — show message
         setAiPlayMessage('AI drew a tile');
@@ -187,6 +188,7 @@ export default function SinglePlayer() {
       }
 
       setAiPlayedTileIds(new Set());
+      setAiPlayMessage(null);
       setAiThinking(false);
     }, 400 + Math.random() * 400);
   }, [state, difficulty, dispatch, drawTile, audio]);
